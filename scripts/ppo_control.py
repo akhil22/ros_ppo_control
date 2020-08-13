@@ -1,5 +1,3 @@
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
 import rospy
 import tensorflow as tf
 import threading
@@ -7,7 +5,7 @@ import numpy as np
 import utm
 import csv
 import math
-class HuskyPPO:
+class PPOControl:
     def __init__(self):
         self.twist_lock = threading.Lock()
         self.pose_lock = threading.Lock()
@@ -55,7 +53,8 @@ class HuskyPPO:
             for row in pos:
                 #utm_cord = utm.from_latlon(float(row[0]), float(row[1]))
                 utm_cord = [float(row[0]), float(row[1])]
-                self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]),float(row[3])]))
+                #self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]),float(row[3])]))
+                self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]), 1.5]))
             for i in range(0, len(self.waypoints_list) - 1):
                 xdiff = self.waypoints_list[i+1][0] - self.waypoints_list[i][0]
                 ydiff = self.waypoints_list[i+1][1] - self.waypoints_list[i][1]
@@ -65,6 +64,7 @@ class HuskyPPO:
         pass
     def update_closest_idx(self, pose):
         idx = self.closest_idx
+        self.closest_dist = math.inf
         for i in range(self.closest_idx, self.num_waypoints):
             dist = self.get_dist(self.waypoints_list[i], pose)
             if(dist <= self.closest_dist):
