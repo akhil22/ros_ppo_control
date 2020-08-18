@@ -10,6 +10,7 @@ import utm
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import rospkg
 def zero_to_2pi(theta):
     if theta < 0:
         theta = 2*math.pi + theta
@@ -26,10 +27,12 @@ class HuskyPPONode:
     def __init__(self):
         self.warthog_ppo = PPOControl()
         vel_topic = rospy.get_param('~vel_topic', 'warthog_velocity_controller/cmd_vel')
-        odom_topic = rospy.get_param('~odom_topic', 'warthog_velocity_controller/odom')
+        odom_topic = rospy.get_param('~odom_topic', 'odometry/filtered2')
         ins_topic = rospy.get_param('~ins_topic', 'vectronav/fix')
         #frozen_graph_path = rospy.get_param('~frozen_graph_path', "/home/sai/hdd1/ml-master/ml-agents/config/ppo/results/wlong_path54/3DBall/frozen_graph_def.pb")
-        frozen_graph_path = rospy.get_param('~frozen_graph_path', "../policies/wlong_path54/3DBall/frozen_graph_def.pb")
+        rospack = rospkg.RosPack()
+        pkg_path = rospack.get_path('ros_ppo_control')
+        frozen_graph_path = rospy.get_param('~frozen_graph_path', pkg_path + "/policies/wlong_path54/3DBall/frozen_graph_def.pb")
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
         waypoint_file_path = rospy.get_param('~waypoint_file_path', "waypoints.txt")
         self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
