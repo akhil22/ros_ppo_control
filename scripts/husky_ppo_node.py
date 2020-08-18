@@ -34,7 +34,7 @@ class HuskyPPONode:
         pkg_path = rospack.get_path('ros_ppo_control')
         frozen_graph_path = rospy.get_param('~frozen_graph_path', pkg_path + "/policies/wlong_path54/3DBall/frozen_graph_def.pb")
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
-        waypoint_file_path = rospy.get_param('~waypoint_file_path', "waypoints.txt")
+        waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
         self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
