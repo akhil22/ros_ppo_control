@@ -51,16 +51,10 @@ class PPOControl:
         with open(filename) as csv_file:
             pos = csv.reader(csv_file, delimiter=',')
             for row in pos:
-                utm_cord = utm.from_latlon(float(row[0]), float(row[1]))
-                #utm_cord = [float(row[0]), float(row[1])]
-                #phi = math.pi/4
-                phi = 0.
-                xcoord = utm_cord[0]*math.cos(phi) + utm_cord[1]*math.sin(phi)
-                ycoord = -utm_cord[0]*math.sin(phi) + utm_cord[1]*math.cos(phi)
-             #   self.waypoints_list.append(np.array([xcoord, ycoord, float(row[2]),float(row[3])]))
-                #self.waypoints_list.append(np.array([xcoord, ycoord, float(row[2]),2.5]))
-                self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]),float(row[3])]))
-               # self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]), 1.5]))
+                #utm_cord = utm.from_latlon(float(row[0]), float(row[1]))
+                utm_cord = [float(row[0]), float(row[1])]
+                #self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]),float(row[3])]))
+                self.waypoints_list.append(np.array([utm_cord[0], utm_cord[1], float(row[2]), 1.5]))
             for i in range(0, len(self.waypoints_list) - 1):
                 xdiff = self.waypoints_list[i+1][0] - self.waypoints_list[i][0]
                 ydiff = self.waypoints_list[i+1][1] - self.waypoints_list[i][1]
@@ -92,15 +86,15 @@ class PPOControl:
                 xdiff = self.waypoints_list[k][0] - pose[0]
                 ydiff = self.waypoints_list[k][1] - pose[1]
                 th = self.get_theta(xdiff, ydiff)
-                vehicle_th = self.zero_to_2pi(pose[2])
-                #vehicle_th = -vehicle_th
-                #vehicle_th = 2*math.pi - vehicle_th
+                vehicle_th = self.pi_to_pi(pose[2])
+                vehicle_th = -vehicle_th
+                vehicle_th = 2*math.pi - vehicle_th
                 yaw_error = self.pi_to_pi(self.waypoints_list[k][2] - vehicle_th)
                 vel = self.waypoints_list[k][3]
                 obs[j] = r
-                obs[j+1] = self.pi_to_pi(th - vehicle_th)
+                obs[j+1] = th
                 obs[j+2] = yaw_error
-                obs[j+3] = vel - twist[0]
+                obs[j+3] = vel
             else:
                 obs[j] = 0.
                 obs[j+1] = 0.
