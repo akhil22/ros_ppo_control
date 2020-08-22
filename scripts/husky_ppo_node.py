@@ -30,6 +30,7 @@ class HuskyPPONode:
         twist_odom_topic = rospy.get_param('~odom_topic', 'warthog_velocity_controller/odom')
         pose_odom_topic = rospy.get_param('~odom_topic2', 'odometry/filtered2')
         ins_topic = rospy.get_param('~ins_topic', 'vectronav/fix')
+        path_topic = rospy.get_param('~path_topic', '/local_planning/path/final_trajectory')
         #frozen_graph_path = rospy.get_param('~frozen_graph_path', "/home/sai/hdd1/ml-master/ml-agents/config/ppo/results/wlong_path54/3DBall/frozen_graph_def.pb")
         rospack = rospkg.RosPack()
         pkg_path = rospack.get_path('ros_ppo_control')
@@ -37,27 +38,50 @@ class HuskyPPONode:
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
-        self.warthog_ppo.read_waypoint_file(waypoint_file_path)
+        #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
         rospy.Subscriber(twist_odom_topic, Odometry, self.twist_odom_cb)
         rospy.Subscriber(pose_odom_topic, Odometry, self.pose_odom_cb)
+        rospy.Subscriber(path_topic, Path, self.path_cb, queue_size = 1)
+        self.got_twist = False
+        self.got_odom = False
+        self.got_path = False
         #rospy.Subscriber(ins_topic, ins, self.ins_cb)
-        self.cx = [i[0] for i in self.warthog_ppo.waypoints_list]
-        self.cy = [i[1] for i in self.warthog_ppo.waypoints_list]
-        print(self.warthog_ppo.waypoints_list)
-        plt.plot(self.cx, self.cy, '+b')
-        plt.show()
+        show_path = False
+        if show_path:
+            self.cx = [i[0] for i in self.warthog_ppo.waypoints_list]
+            self.cy = [i[1] for i in self.warthog_ppo.waypoints_list]
+            print(self.warthog_ppo.waypoints_list)
+            plt.plot(self.cx, self.cy, '+b')
+            plt.show()
     def twist_odom_cb(self, data):
         #return
         v = data.twist.twist.linear.x
         w = data.twist.twist.angular.z
         self.warthog_ppo.set_twist([v, w])
+        if not self.got_twist:
+            self.got_twist = True
+    def path_cb(self, path):
+        x_list = []
+        y_list = []
+        th_list = []
+        v_list = []
+        for pose in path.poses:
+            x_list.append(pose.pose.position.x)
+            y_list.append(pose.pose.position.y)
+            th_list.append(pose.pose.position.x)
+            v_list.append(pose.pose.position.z)
+        self.warthog_ppo.set_waypoints_from_list(x_list, y_list, th_list, v_list)
+        if not self.got_path:
+            self.got_path = True
     def pose_odom_cb(self, data):
         #return
         x = data.pose.pose.position.x
         y = data.pose.pose.position.y
         th = data.pose.covariance[1]
         self.warthog_ppo.set_pose([x, y, th])
+        if not self.got_odom:
+            self.got_odom = True
     def ins_cb(self, data):
         lat = data.LLA.x
         lon = data.LLA.y
@@ -70,7 +94,12 @@ def main():
     rate = rospy.Rate(20)
     do_sim = rospy.get_param("~do_sim", True)
     do_sim = False
+    #warthog_ppo_node.got_path = True
     if do_sim:
+        r = rospy.Rate(1)
+        while(not rospy.is_shutdown() and (not warthog_ppo_node.got_path)):
+            rospy.logwarn("not getting path will try again")
+            r.sleep()
         start_idx = 10
         xinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][0]
         yinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][1]
@@ -83,6 +112,7 @@ def main():
         x_pose = []
         y_pose = []
         for i in range(0, 300):
+            tstart = rospy.get_rostime()
             obs = warthog_ppo_node.warthog_ppo.get_observation()
             twist = warthog_ppo_node.warthog_ppo.get_control(np.array(obs).reshape(1,42))
             v = np.clip(twist[0][0], 0, 1) * 2.0
@@ -92,12 +122,28 @@ def main():
             warthog_ppo_node.warthog_ppo.set_twist([v, w])
             x_pose.append(current_pose[0])
             y_pose.append(current_pose[1])
-            print(v,w)
-        plt.plot(warthog_ppo_node.cx, warthog_ppo_node.cy, '+b')
+            #print(v,w)
+            delta = (rospy.get_rostime() - tstart).to_sec()
+            logstring = "getting v= " + str(v) +" getting w= "+ str(w) + " time delta = " + str(delta)
+            rospy.loginfo(logstring)
+        warthog_ppo_node.warthog_ppo.path_lock.acquire()
+        cx = [i[0] for i in warthog_ppo_node.warthog_ppo.waypoints_list]
+        cy = [i[1] for i in warthog_ppo_node.warthog_ppo.waypoints_list]
+        warthog_ppo_node.warthog_ppo.path_lock.release()
+        plt.plot(cx, cy, '+b')
         plt.plot(x_pose, y_pose, '+g')
         plt.show()
     else:
         while not rospy.is_shutdown():
+            tstart = rospy.get_rostime()
+            if not (warthog_ppo_node.got_odom and warthog_ppo_node.got_path and warthog_ppo_node.got_twist):
+                if not warthog_ppo_node.got_odom:
+                    rospy.logwarn("Not Receiving Odometry")
+                if not warthog_ppo_node.got_twist:
+                    rospy.logwarn("Not Receiving Twist")
+                if not warthog_ppo_node.got_odom:
+                    rospy.logwarn("Not Receiving Path")
+                continue
             obs = warthog_ppo_node.warthog_ppo.get_observation()
             twist = warthog_ppo_node.warthog_ppo.get_control(np.array(obs).reshape(1,42))
             v = np.clip(twist[0][0], 0, 1) * 2.0
@@ -108,6 +154,8 @@ def main():
             twist_msg.linear.x =v
             twist_msg.angular.z =w
             warthog_ppo_node.twist_pub.publish(twist_msg)
+            delta = (rospy.get_rostime() - tstart).to_sec()
+            logstring = "getting v= " + str(v) +" getting w= "+ str(w) + " time delta = " + str(delta)
             rate.sleep()
 if __name__=='__main__':
     main()

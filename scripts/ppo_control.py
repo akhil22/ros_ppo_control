@@ -9,6 +9,7 @@ class PPOControl:
     def __init__(self):
         self.twist_lock = threading.Lock()
         self.pose_lock = threading.Lock()
+        self.path_lock = threading.Lock()
         self.waypoints_list = []
         self.pose = None
         self.twist = None
@@ -20,14 +21,23 @@ class PPOControl:
         self.num_waypoints = 0
         self.horizon = 10
     def set_waypoints_from_list(self, x_list, y_list, th_list, v_list):
+        #self.path_lock.acquire()
+        self.waypoint_list = []
         for i in range(0, len(x_list)):
             self.waypoints_list.append(np.array([x_list[i], y_list[i], th_list[i], v_list[i]]))
-        for i in range(0, len(self.waypoints_list) - 1):
+            if i > 0:
+                xdiff = self.waypoints_list[i][0] - self.waypoints_list[i-1][0]
+                ydiff = self.waypoints_list[i][1] - self.waypoints_list[i-1][1]
+                self.waypoints_list[i-1][2] = self.zero_to_2pi(self.get_theta(xdiff, ydiff))
+        self.waypoints_list[i-1][2] = self.waypoints_list[i-2][2]
+        self.num_waypoints = i
+        '''for i in range(0, len(self.waypoints_list) - 1):
             xdiff = self.waypoints_list[i+1][0] - self.waypoints_list[i][0]
             ydiff = self.waypoints_list[i+1][1] - self.waypoints_list[i][1]
             self.waypoints_list[i][2] = self.zero_to_2pi(self.get_theta(xdiff, ydiff))
         self.waypoints_list[i+1][2] = self.waypoints_list[i][2]
-        self.num_waypoints = i+2
+        self.num_waypoints = i+2'''
+        #self.path_lock.release()
     def zero_to_2pi(self, theta):
         if theta < 0:
             theta = 2*math.pi + theta
@@ -80,6 +90,7 @@ class PPOControl:
                 break
         self.closest_idx = idx
     def get_observation(self):
+        self.path_lock.acquire()
         obs = [0]*(self.horizon*4 + 2)
         pose = self.get_pose()
         twist = self.get_twist()
@@ -107,6 +118,7 @@ class PPOControl:
                 obs[j+2] = 0.
                 obs[j+3] = 0.
             j = j+4
+        self.path_lock.release()
         obs[j] = twist[0]
         obs[j+1] = twist[1]
         return obs
