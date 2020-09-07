@@ -6,6 +6,7 @@ from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 #from ilqr.msg import ins
 import tensorflow as tf
+from pyquaternion import Quaternion as qut
 import utm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,8 +28,8 @@ class HuskyPPONode:
     def __init__(self):
         self.warthog_ppo = PPOControl()
         vel_topic = rospy.get_param('~vel_topic', 'warthog_velocity_controller/cmd_vel')
-        twist_odom_topic = rospy.get_param('~odom_topic', 'warthog_velocity_controller/odom')
-        pose_odom_topic = rospy.get_param('~odom_topic2', 'odometry/filtered2')
+        twist_odom_topic = rospy.get_param('~odom_topic', '/warthog_velocity_controller/odom')
+        pose_odom_topic = rospy.get_param('~odom_topic2', '/odometry/filtered')
         ins_topic = rospy.get_param('~ins_topic', 'vectronav/fix')
         path_topic = rospy.get_param('~path_topic', '/local_planning/path/final_trajectory')
         #frozen_graph_path = rospy.get_param('~frozen_graph_path', "/home/sai/hdd1/ml-master/ml-agents/config/ppo/results/wlong_path54/3DBall/frozen_graph_def.pb")
@@ -57,11 +58,14 @@ class HuskyPPONode:
     def twist_odom_cb(self, data):
         #return
         v = data.twist.twist.linear.x
+        rospy.logwarn("getting twist")
         w = data.twist.twist.angular.z
         self.warthog_ppo.set_twist([v, w])
         if not self.got_twist:
             self.got_twist = True
     def path_cb(self, path):
+        if self.got_path:
+            return
         x_list = []
         y_list = []
         th_list = []
@@ -78,7 +82,12 @@ class HuskyPPONode:
         #return
         x = data.pose.pose.position.x
         y = data.pose.pose.position.y
-        th = data.pose.covariance[1]
+        temp_y = data.pose.pose.orientation.z
+        temp_x = data.pose.pose.orientation.w
+        quat = (temp_x, 0, 0, temp_y)
+        myqut = qut(quat)
+        th = myqut.radians
+        #th = data.pose.covariance[1]
         self.warthog_ppo.set_pose([x, y, th])
         if not self.got_odom:
             self.got_odom = True
@@ -93,16 +102,16 @@ def main():
     warthog_ppo_node = HuskyPPONode()
     rate = rospy.Rate(20)
     do_sim = rospy.get_param("~do_sim", True)
-    do_sim = False
+    do_sim = True
     #warthog_ppo_node.got_path = True
     if do_sim:
         r = rospy.Rate(1)
         while(not rospy.is_shutdown() and (not warthog_ppo_node.got_path)):
             rospy.logwarn("not getting path will try again")
             r.sleep()
-        start_idx = 10
-        xinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][0]
-        yinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][1]
+        start_idx = 0
+        xinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][0] + 0.1
+        yinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][1] + 0.1
         thinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][2]
         warthog_ppo_node.warthog_ppo.set_pose([xinit, yinit, thinit])
        # warthog_ppo_node.warthog_ppo.set_pose([132.180, -78.957, 160*math.pi/180.])
@@ -111,7 +120,7 @@ def main():
         warthog_ppo_node.warthog_ppo.set_twist([0., 0.])
         x_pose = []
         y_pose = []
-        for i in range(0, 300):
+        for i in range(0, 100):
             tstart = rospy.get_rostime()
             obs = warthog_ppo_node.warthog_ppo.get_observation()
             twist = warthog_ppo_node.warthog_ppo.get_control(np.array(obs).reshape(1,42))
