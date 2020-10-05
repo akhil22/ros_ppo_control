@@ -1,12 +1,10 @@
 import rospy
-import torch
-from stable_baselines3 import PPO
+import tensorflow as tf
 import threading
 import numpy as np
 import utm
 import csv
 import math
-import gym
 class PPOControl:
     def __init__(self):
         self.twist_lock = threading.Lock()
@@ -15,7 +13,7 @@ class PPOControl:
         self.waypoints_list = []
         self.pose = None
         self.twist = None
-        self.model = None
+        self.graph = None
         self.graph_def = None
         self.observation = None
         self.closest_idx = 0
@@ -146,10 +144,6 @@ class PPOControl:
     #    pass
     #def gps_callback(self, data):
     #    pass
-    def read_ppo_policy(self, filepath):
-        env = gym.make("CartPole-v1")
-        self.model = PPO('MlpPolicy', env, verbose=1);
-        self.model = self.model.load(filepath);
     def read_tf_frozen_graph(self, filepath):
         with tf.gfile.GFile(filepath, "rb") as f:
             self.graph_def = tf.GraphDef()
@@ -162,9 +156,6 @@ class PPOControl:
         sess = tf.Session(graph = self.graph)
         op = self.graph.get_tensor_by_name("action:0")
         return sess.run(op, feed_dict)
-    def get_ppo_control(self, observation):
-        action, _states = self.model.predict(observation, deterministic=True)
-        return [action]
 #print(husky_ppo.zero_to_2pi(-0.1))
 #print(husky_ppo.zero_to_2pi(2*math.pi + 0.5))
 '''husky_ppo = HuskyPPO()
