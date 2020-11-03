@@ -63,8 +63,8 @@ class PPOControl:
         with open(filename) as csv_file:
             pos = csv.reader(csv_file, delimiter=',')
             for row in pos:
-                utm_cord = utm.from_latlon(float(row[0]), float(row[1]))
-                #utm_cord = [float(row[0]), float(row[1])]
+                #utm_cord = utm.from_latlon(float(row[0]), float(row[1]))
+                utm_cord = [float(row[0]), float(row[1])]
                 #phi = math.pi/4
                 phi = 0.
                 xcoord = utm_cord[0]*math.cos(phi) + utm_cord[1]*math.sin(phi)
