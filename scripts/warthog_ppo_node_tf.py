@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from ppo_control import PPOControl
+from ppo_control_tf import PPOControl
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
@@ -47,7 +47,7 @@ class HuskyPPONode:
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
-        self.warthog_ppo.read_ppo_policy('~/warthog_rl_alien/policy/vel_weight4_d6')
+        self.warthog_ppo.read_ppo_policy('/home/sai/warthog_rl_alien/policy/vel_weight7_stable9')
         #self.warthog_ppo.read_ppo_policy('./model2')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
