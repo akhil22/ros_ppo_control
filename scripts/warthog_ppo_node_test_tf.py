@@ -34,7 +34,7 @@ def simulate_warthog(X, v, w, dt):
 class HuskyPPONode:
     def __init__(self):
         self.warthog_ppo = PPOControl()
-        vel_topic = rospy.get_param('~vel_topic', 'warthog_velocity_controller/cmd_vel')
+        vel_topic = rospy.get_param('~vel_topic', 'warthog_velocity_controller/cmd_vel2')
         twist_odom_topic = rospy.get_param('~odom_topic', '/warthog_velocity_controller/odom')
         pose_odom_topic = rospy.get_param('~odom_topic2', '/odometry/filtered')
         ins_topic = rospy.get_param('~ins_topic', 'vectronav/fix')
@@ -48,7 +48,7 @@ class HuskyPPONode:
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
         #self.warthog_ppo.read_ppo_policy('/home/sai/warthog_rl_alien/policy/vel_weight4_d9')
-        self.warthog_ppo.read_ppo_policy('/home/sai/warthog_rl_alien/policy/vel_weight7_stable9')
+        self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight7_stable9')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
         rospy.Subscriber(twist_odom_topic, Odometry, self.twist_odom_cb)
@@ -104,12 +104,12 @@ class HuskyPPONode:
         if not self.got_path:
             self.got_path = True
     def pose_odom_cb(self, data):
-        self.got_odom = True
-        return
-        #if self.got_odom:
-            #return
-        x = data.pose.pose.position.x 
-        y = data.pose.pose.position.y
+        #self.got_odom = True
+        #return
+        if self.got_odom:
+            return
+        x = data.pose.pose.position.x + 0.1
+        y = data.pose.pose.position.y + 0.1
         temp_y = data.pose.pose.orientation.z
         temp_x = data.pose.pose.orientation.w
         quat = (temp_x, 0, 0, temp_y)
@@ -206,7 +206,7 @@ def main():
                     xinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][0] + 0.05
                     yinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][1] + 0.05
                     thinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][2]
-                    warthog_ppo_node.warthog_ppo.set_pose([xinit, yinit, thinit])
+                    #warthog_ppo_node.warthog_ppo.set_pose([xinit, yinit, thinit])
                     warthog_ppo_node.warthog_ppo.set_twist([0.,0.])
             obs = warthog_ppo_node.warthog_ppo.get_observation()
             twist = warthog_ppo_node.warthog_ppo.get_ppo_control(np.array(obs).reshape(1,42))

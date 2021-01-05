@@ -1,5 +1,5 @@
 import rospy
-import torch
+#import torch
 from stable_baselines import PPO2
 import threading
 import numpy as np
