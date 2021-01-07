@@ -47,7 +47,8 @@ class HuskyPPONode:
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
-        self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight7_stable9')
+        self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable_delayed9')
+        #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable9')
         #self.warthog_ppo.read_ppo_policy('./model2')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
@@ -76,8 +77,8 @@ class HuskyPPONode:
         if not self.got_twist:
             self.got_twist = True
     def path_cb(self, path):
-        if self.got_path:
-            return
+        #if self.got_path:
+            #return
         x_list = []
         y_list = []
         th_list = []
@@ -111,9 +112,13 @@ class HuskyPPONode:
         y = data.pose.pose.position.y
         temp_y = data.pose.pose.orientation.z
         temp_x = data.pose.pose.orientation.w
+        print("z: ", temp_y)
+        print("w: ", temp_x)
         quat = (temp_x, 0, 0, temp_y)
         myqut = qut(quat)
-        th = myqut.radians
+        print("without sign: ",myqut.radians*180/math.pi)
+        th = myqut.radians*np.sign(temp_y)
+        print("with sign: ",th*180/math.pi)
         #th = 2*math.atan2(temp_y, temp_x)*180/math.pi
         #th = data.pose.covariance[1]
         self.warthog_ppo.set_pose([x, y, th])
@@ -250,8 +255,10 @@ def main():
         x_ = temp_pose[0]
         y_ = temp_pose[1]
         th_ = temp_pose[2]
-        plt.arrow(x_,y_, 2*math.cos(th_), 2*math.sin(th_))
+        plt.arrow(x_,y_, 2*math.cos(th_), 2*math.sin(th_), head_length=.5, head_width=.2)
         plt.plot(x_pose, y_pose, '+g')
+        plt.xlim(x_-30, x_ +30)
+        plt.ylim(y_-30, y_ +30)
         plt.show()
 if __name__=='__main__':
     main()

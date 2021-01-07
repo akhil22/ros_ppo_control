@@ -48,7 +48,8 @@ class HuskyPPONode:
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints.txt")
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
         #self.warthog_ppo.read_ppo_policy('/home/sai/warthog_rl_alien/policy/vel_weight4_d9')
-        self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight7_stable9')
+        #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight7_stable9')
+        self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable_delayed9')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
         self.twist_pub = rospy.Publisher(vel_topic, Twist, queue_size = 10)
         rospy.Subscriber(twist_odom_topic, Odometry, self.twist_odom_cb)
@@ -115,7 +116,7 @@ class HuskyPPONode:
         quat = (temp_x, 0, 0, temp_y)
         myqut = qut(quat)
         th = myqut.radians
-        th = 2*math.atan2(temp_y, temp_x)*180/math.pi
+        #th = 2*math.atan2(temp_y, temp_x)*180/math.pi
         #th = data.pose.covariance[1]
         self.warthog_ppo.set_pose([x, y, th])
         if not self.got_odom:
