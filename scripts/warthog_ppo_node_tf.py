@@ -88,18 +88,18 @@ class HuskyPPONode:
             x_list.append(pose.pose.position.x)
             y_list.append(pose.pose.position.y)
             th_list.append(pose.pose.position.x)
-            #v_list.append(pose.pose.position.z)
-            v_list.append(2.5)
+            v_list.append(pose.pose.position.z)
+            #v_list.append(2.5)
             i = i+1
         x_list = x_list[:-1]
         y_list = y_list[:-1]
         th_list = th_list[:-1]
         v_list = v_list[:-1]
-        for j in range(0,30):
+        '''for j in range(0,30):
             x_list.append(x_list[i-2 + j] + x_list[i-3] - x_list[i-4])
             y_list.append(y_list[i-2 + j] + y_list[i-3] - y_list[i-4])
             th_list.append(0)
-            v_list.append(2.5)
+            v_list.append(0)'''
         self.warthog_ppo.set_waypoints_from_list(x_list, y_list, th_list, v_list)
         if not self.got_path:
             self.got_path = True
@@ -256,6 +256,9 @@ def main():
         y_ = temp_pose[1]
         th_ = temp_pose[2]
         plt.arrow(x_,y_, 2*math.cos(th_), 2*math.sin(th_), head_length=.5, head_width=.2)
+        print(cx)
+        print("diff")
+        print(cy)
         plt.plot(x_pose, y_pose, '+g')
         plt.xlim(x_-30, x_ +30)
         plt.ylim(y_-30, y_ +30)

@@ -23,8 +23,8 @@ class PPOControl:
         self.num_waypoints = 0
         self.horizon = 10
     def set_waypoints_from_list(self, x_list, y_list, th_list, v_list):
-        #self.path_lock.acquire()
-        self.waypoint_list = []
+        self.path_lock.acquire()
+        self.waypoints_list = []
         for i in range(0, len(x_list)):
             self.waypoints_list.append(np.array([x_list[i], y_list[i], th_list[i], v_list[i]]))
             if i > 0:
@@ -39,7 +39,7 @@ class PPOControl:
             self.waypoints_list[i][2] = self.zero_to_2pi(self.get_theta(xdiff, ydiff))
         self.waypoints_list[i+1][2] = self.waypoints_list[i][2]
         self.num_waypoints = i+2'''
-        #self.path_lock.release()
+        self.path_lock.release()
     def zero_to_2pi(self, theta):
         if theta < 0:
             theta = 2*math.pi + theta
