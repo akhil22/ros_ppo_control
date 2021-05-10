@@ -50,8 +50,8 @@ class HuskyPPONode:
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
         #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable_delayed9')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight9_stable_delayed9')
-        #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight8_stable9')
-        self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/real_train_policy')
+        self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight8_stable9')
+        #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog/warthog_rl/policy/combine_trained')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable9')
         #self.warthog_ppo.read_ppo_policy('./model2')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
@@ -192,6 +192,7 @@ def main():
         w_rec = []
         v_act = []
         w_act = []
+        cross_err = []
         while not rospy.is_shutdown():
             temp_pose=[0,0,0]
             tstart = rospy.get_rostime()
@@ -222,6 +223,7 @@ def main():
             w = np.clip(twist[0][1], -1, 1)*2.5
             v_rec.append(v)
             w_rec.append(w)
+            cross_err.append(warthog_ppo_node.warthog_ppo.current_pose)
             if sim_run:
                 current_pose = simulate_warthog(warthog_ppo_node.warthog_ppo.get_pose(), v, w, 0.05)
                 warthog_ppo_node.warthog_ppo.set_pose(current_pose)
@@ -248,14 +250,18 @@ def main():
         cy = [i[1] for i in warthog_ppo_node.warthog_ppo.waypoints_list]
         warthog_ppo_node.warthog_ppo.path_lock.release()
         plt.figure(1)
-        plt.plot(v_rec, 'g')
-        plt.plot(v_act, 'r')
+        plt.plot(v_rec, 'g', label='controller commanded v')
+        plt.plot(v_act, 'r', label='warthog actual v')
+        plt.legend()
+        plt.title("linear velocity plots")
         plt.figure(2)
-        plt.plot(w_rec, 'g')
-        plt.plot(w_act, 'r')
+        plt.plot(w_rec, 'g', label='controller commanded w')
+        plt.plot(w_act, 'r', label='warthog actual w')
+        plt.legend()
+        plt.title("angular velocity plots")
         plt.figure(3)
         #plt.show()
-        plt.plot(cx, cy, '+b')
+        plt.plot(cx, cy, '+b', label='waypoints')
         x_ = temp_pose[0]
         y_ = temp_pose[1]
         th_ = temp_pose[2]
@@ -263,9 +269,15 @@ def main():
         print(cx)
         print("diff")
         print(cy)
-        plt.plot(x_pose, y_pose, '+g')
+        plt.plot(x_pose, y_pose, '+g', label='controller trajectory')
         plt.xlim(x_-30, x_ +30)
         plt.ylim(y_-30, y_ +30)
+        plt.title("Ground truth vs Controller response")
+        plt.legend()
+        plt.figure(4)
+        plt.plot(cross_err), +'r', label='crosstrack error')
+        plt.legend()
+        plt.title('Crosstrack error with Time')
         plt.show()
 if __name__=='__main__':
     main()

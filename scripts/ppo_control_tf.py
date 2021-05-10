@@ -22,6 +22,7 @@ class PPOControl:
         self.closest_dist = math.inf
         self.num_waypoints = 0
         self.horizon = 10
+        self.current_cross_track = 0
     def set_waypoints_from_list(self, x_list, y_list, th_list, v_list):
         self.path_lock.acquire()
         self.waypoints_list = []
@@ -106,6 +107,8 @@ class PPOControl:
                 ydiff = self.waypoints_list[k][1] - pose[1]
                 th = self.get_theta(xdiff, ydiff)
                 vehicle_th = self.zero_to_2pi(pose[2])
+                if i ==0:
+                    self.current_cross_track = r*sin(math.atan2(ydiff, xdiff) - self.waypoints_lists[k][2])
                 #vehicle_th = -vehicle_th
                 #vehicle_th = 2*math.pi - vehicle_th
                 yaw_error = self.pi_to_pi(self.waypoints_list[k][2] - vehicle_th)
