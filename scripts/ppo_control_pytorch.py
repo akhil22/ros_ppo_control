@@ -1,12 +1,48 @@
+from tkinter import W
+import torch
 import rospy
+from torch import nn
+import torch.nn.functional as F
+from torch.distributions import Normal
+import scipy.signal
 #import torch
-from stable_baselines import PPO2
 import threading
 import numpy as np
 import utm
 import csv
 import math
 import gym
+class PolicyNetworkGauss(nn.Module):
+    def __init__(self, obs_dimension, sizes, action_dimension,act = nn.ReLU):
+        super(PolicyNetworkGauss, self).__init__()
+        sizes = [obs_dimension] + sizes + [action_dimension]
+        out_activation = nn.Identity
+        self.layers = []
+        for j in range(0,len(sizes) - 1):
+            act_l = act if j < len(sizes) -2 else out_activation
+            self.layers+=[nn.Linear(sizes[j], sizes[j+1]), act_l()]
+        self.mu = nn.Sequential(*self.layers)
+        log_std = -0.5*np.ones(action_dimension, dtype=np.float32)
+        self.log_std = torch.nn.Parameter(torch.as_tensor(log_std), requires_grad=True)
+    def forward(self, x):
+        mean = self.mu(x)
+        std = torch.exp(self.log_std)
+        dist = Normal(mean, std)
+        return dist
+def discount_cumsum(x, discount):
+    """
+    magic from rllab for computing discounted cumulative sums of vectors.
+    input: 
+        vector x, 
+        [x0, 
+         x1, 
+         x2]
+    output:
+        [x0 + discount * x1 + discount^2 * x2,  
+         x1 + discount * x2,
+         x2]
+    """
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 class PPOControl:
     def __init__(self):
         self.twist_lock = threading.Lock()
@@ -16,13 +52,14 @@ class PPOControl:
         self.pose = None
         self.twist = None
         self.model = None
-        self.graph_def = None
         self.observation = None
         self.closest_idx = 0
         self.closest_dist = math.inf
         self.num_waypoints = 0
         self.horizon = 10
         self.current_cross_track = 0
+        #self.pi = torch.load("./temp_warthog.pt")
+        self.pi = None 
     def set_waypoints_from_list(self, x_list, y_list, th_list, v_list):
         self.path_lock.acquire()
         self.waypoints_list = []
@@ -150,24 +187,28 @@ class PPOControl:
     #def gps_callback(self, data):
     #    pass
     def read_ppo_policy(self, filepath):
-        env = gym.make("CartPole-v1")
-        self.model = PPO2('MlpPolicy', env, verbose=1);
-        self.model = self.model.load(filepath);
-    def read_tf_frozen_graph(self, filepath):
+        #self.pi = torch.load("./temp_warthog.pt")
+        self.pi = torch.load(filepath)
+    '''def read_tf_frozen_graph(self, filepath):
         with tf.gfile.GFile(filepath, "rb") as f:
             self.graph_def = tf.GraphDef()
             self.graph_def.ParseFromString(f.read())
         with tf.Graph().as_default() as self.graph:
             tf.import_graph_def(self.graph_def, name="")
-        self.observation = self.graph.get_tensor_by_name("vector_observation:0")
-    def get_control(self, observation):
+        self.observation = self.graph.get_tensor_by_name("vector_observation:0")'''
+    '''def get_control(self, observation):
         feed_dict = {self.observation:observation}
         sess = tf.Session(graph = self.graph)
         op = self.graph.get_tensor_by_name("action:0")
         return sess.run(op, feed_dict)
     def get_ppo_control(self, observation):
         action, _states = self.model.predict(observation, deterministic=True)
-        return [action]
+        return [action]'''
+    def get_pytorch_ppo_control(self,observation):
+        m = self.pi(torch.as_tensor(observation, dtype=torch.float32))
+        action = m.loc
+        return action.item()
+
 #print(husky_ppo.zero_to_2pi(-0.1))
 #print(husky_ppo.zero_to_2pi(2*math.pi + 0.5))
 '''husky_ppo = HuskyPPO()

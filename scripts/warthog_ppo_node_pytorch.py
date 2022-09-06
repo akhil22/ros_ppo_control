@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
-from ppo_control_tf import PPOControl
+import torch
+from ppo_control_pytorch import PPOControl
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
@@ -40,14 +41,12 @@ class HuskyPPONode:
         #pose_odom_topic = rospy.get_param('~odom_topic2', '/aft_mapped_to_init_high_frec')
         pose_odom_topic = rospy.get_param('~odom_topic2', '/aft_mapped_to_init_high_frec')
         #pose_odom_topic = rospy.get_param('~odom_topic2', '/odometry/filtered2')
-        ins_topic = rospy.get_param('~ins_topic', 'vectronav/fix')
         path_topic = rospy.get_param('~path_topic', '/local_planning/path/final_trajectory')
         #path_topic = rospy.get_param('~path_topic', '/local_planning/path/optimized_a_star_path')
         #frozen_graph_path = rospy.get_param('~frozen_graph_path', "/home/sai/hdd1/ml-master/ml-agents/config/ppo/results/wlong_path54/3DBall/frozen_graph_def.pb")
         rospack = rospkg.RosPack()
         #pkg_path = rospack.get_path('ros_ppo_control')
         pkg_path = "./"
-        frozen_graph_path = rospy.get_param('~frozen_graph_path', pkg_path + "/policies/wlong_path54/3DBall/frozen_graph_def.pb")
         #waypoint_file_path = rospy.get_param('~waypoint_file_path', "unity_waypoints_bkp.txt")
         waypoint_file_path = rospy.get_param('~waypoint_file_path', pkg_path + "/scripts/waypoints2.txt")
         #self.warthog_ppo.read_tf_frozen_graph(frozen_graph_path)
@@ -217,7 +216,8 @@ def main():
                     thinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][2]
                     warthog_ppo_node.warthog_ppo.set_pose([xinit, yinit, thinit])
             obs = warthog_ppo_node.warthog_ppo.get_observation()
-            twist = warthog_ppo_node.warthog_ppo.get_ppo_control(np.array(obs).reshape(1,42))
+            #twist = warthog_ppo_node.warthog_ppo.get_pytorch_ppo_control(np.array(obs).reshape(1,42))
+            twist = warthog_ppo_node.warthog_ppo.get_pytorch_ppo_control(obs)
             #v = np.clip(twist[0][0], 0, 1) * 2.0
             closest_idx = warthog_ppo_node.warthog_ppo.closest_idx
             #v = warthog_ppo_node.warthog_ppo.waypoints_list[closest_idx][3]
