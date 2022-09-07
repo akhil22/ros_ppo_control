@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from tkinter import W
 import rospy
 import torch
 from ppo_control_pytorch import PPOControl
@@ -13,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import rospkg
+import sys
 def zero_to_2pi(theta):
     if theta < 0:
         theta = 2*math.pi + theta
@@ -139,11 +141,16 @@ class HuskyPPONode:
 
 def main():
     rospy.init_node('warthog_ppo_node')
+    traj_file_name = sys.argv[1]
+    traj_file = open(traj_file_name, 'w')
+    traj_file.writelines("x,y,th,vel,w,v_cmd,w_cmd\n")
     warthog_ppo_node = HuskyPPONode()
     rate = rospy.Rate(30)
     do_sim = rospy.get_param("~do_sim", True)
     #do_sim = True
     do_sim = False
+    poses = []
+    max_num_poses = 200
     #warthog_ppo_node.got_path = True
     if do_sim:
         r = rospy.Rate(1)
@@ -216,8 +223,17 @@ def main():
                     thinit = warthog_ppo_node.warthog_ppo.waypoints_list[start_idx][2]
                     warthog_ppo_node.warthog_ppo.set_pose([xinit, yinit, thinit])
             obs = warthog_ppo_node.warthog_ppo.get_observation()
+            curr_pose = warthog_ppo_node.warthog_ppo.get_pose()
+            curr_twist = warthog_ppo_node.warthog_ppo.get_twist()
+            x = curr_pose[0]
+            y = curr_pose[1]
+            th = curr_pose[2]
+            curr_v = curr_twist[0]
+            curr_w = curr_twist[1]
             #twist = warthog_ppo_node.warthog_ppo.get_pytorch_ppo_control(np.array(obs).reshape(1,42))
             twist = warthog_ppo_node.warthog_ppo.get_pytorch_ppo_control(obs)
+            poses.append(np.array([x, y, th, curr_v, curr_w, twist[0], twist[1]]))
+            traj_file.writelines(f"{x},{y},{th},{curr_v},{curr_w},{twist[0]},{twist[1]}\n")
             #v = np.clip(twist[0][0], 0, 1) * 2.0
             closest_idx = warthog_ppo_node.warthog_ppo.closest_idx
             #v = warthog_ppo_node.warthog_ppo.waypoints_list[closest_idx][3]
