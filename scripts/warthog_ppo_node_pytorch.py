@@ -3,6 +3,7 @@ from tkinter import W
 import rospy
 import torch
 from ppo_control_pytorch import PPOControl
+from ppo_control_pytorch import PolicyNetworkGauss
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
@@ -37,11 +38,13 @@ def simulate_warthog(X, v, w, dt):
 class HuskyPPONode:
     def __init__(self):
         self.warthog_ppo = PPOControl()
-        vel_topic = rospy.get_param('~vel_topic', 'warthog_velocity_controller/cmd_vel')
-        twist_odom_topic = rospy.get_param('~odom_topic', '/warthog_velocity_controller/odom')
+        vel_topic = rospy.get_param('~vel_topic', '/airsim_node/Drone1/warthog_cmd')
+        #twist_odom_topic = rospy.get_param('~odom_topic', '/warthog_velocity_controller/odom')
+        twist_odom_topic = rospy.get_param('~odom_topic', '/airsim_node/Drone1/odom_local_ned')
         #pose_odom_topic = rospy.get_param('~odom_topic2', '/odometry/filtered')
         #pose_odom_topic = rospy.get_param('~odom_topic2', '/aft_mapped_to_init_high_frec')
-        pose_odom_topic = rospy.get_param('~odom_topic2', '/aft_mapped_to_init_high_frec')
+        #pose_odom_topic = rospy.get_param('~odom_topic2', '/aft_mapped_to_init_high_frec')
+        pose_odom_topic = rospy.get_param('~odom_topic2', '/airsim_node/Drone1/odom_local_ned')
         #pose_odom_topic = rospy.get_param('~odom_topic2', '/odometry/filtered2')
         path_topic = rospy.get_param('~path_topic', '/local_planning/path/final_trajectory')
         #path_topic = rospy.get_param('~path_topic', '/local_planning/path/optimized_a_star_path')
@@ -56,7 +59,7 @@ class HuskyPPONode:
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight9_stable_delayed9')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight8_stable9')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog/warthog_rl/policy/combine_trained')
-        self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog/warthog_rl/policy/combine_trained_may8_300')
+        self.warthog_ppo.read_ppo_policy('/home/tamu/warthog_rl/temp_policy/tan_h/manaul2_ppo_batch_817600_rew_3238.397676609136.pt')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable9')
         #self.warthog_ppo.read_ppo_policy('./model2')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
@@ -81,7 +84,7 @@ class HuskyPPONode:
             #return
         v = data.twist.twist.linear.x
         rospy.logwarn("getting twist")
-        w = data.twist.twist.angular.z
+        w = -data.twist.twist.angular.z
         self.warthog_ppo.set_twist([v, w])
         if not self.got_twist:
             self.got_twist = True
@@ -117,8 +120,8 @@ class HuskyPPONode:
         #return
         #if self.got_odom:
             #return
-        x = data.pose.pose.position.x 
-        y = data.pose.pose.position.y
+        x = data.pose.pose.position.y 
+        y = data.pose.pose.position.x
         temp_y = data.pose.pose.orientation.z
         temp_x = data.pose.pose.orientation.w
         print("z: ", temp_y)
@@ -126,7 +129,8 @@ class HuskyPPONode:
         quat = (temp_x, 0, 0, temp_y)
         myqut = qut(quat)
         print("without sign: ",myqut.radians*180/math.pi)
-        th = myqut.radians*np.sign(temp_y)
+        # negative for airsim since its odometry is in NED frame
+        th = zero_to_2pi((math.pi/2)-myqut.radians*np.sign(temp_y))
         print("with sign: ",th*180/math.pi)
         #th = 2*math.atan2(temp_y, temp_x)*180/math.pi
         #th = data.pose.covariance[1]
@@ -238,7 +242,7 @@ def main():
             closest_idx = warthog_ppo_node.warthog_ppo.closest_idx
             #v = warthog_ppo_node.warthog_ppo.waypoints_list[closest_idx][3]
             #w = np.clip(twist[0][1], -1, 1) * 2.5
-            twist = twist[0]
+            twist = [twist]
             v = np.clip(twist[0][0], 0, 1)*4.0
             w = np.clip(twist[0][1], -1, 1)*2.5
             v_rec.append(v)

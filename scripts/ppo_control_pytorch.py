@@ -207,7 +207,7 @@ class PPOControl:
     def get_pytorch_ppo_control(self,observation):
         m = self.pi(torch.as_tensor(observation, dtype=torch.float32))
         action = m.loc
-        return action.item()
+        return [action[0].item(), action[1].item()]
 
 #print(husky_ppo.zero_to_2pi(-0.1))
 #print(husky_ppo.zero_to_2pi(2*math.pi + 0.5))
