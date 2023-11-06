@@ -59,7 +59,8 @@ class HuskyPPONode:
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight9_stable_delayed9')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog_rl/policy/vel_weight8_stable9')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/Downloads/warthog/warthog_rl/policy/combine_trained')
-        self.warthog_ppo.read_ppo_policy('/home/tamu/warthog_rl/temp_policy/tan_h/manaul2_ppo_batch_817600_rew_3238.397676609136.pt')
+        #self.warthog_ppo.read_ppo_policy('/home/tamu/warthog_rl/temp_policy/tan_h/manaul2_ppo_batch_817600_rew_3238.397676609136.pt')
+        self.warthog_ppo.read_ppo_policy('/home/usl/Downloads/manaul2_ppo_batch_817600_rew_3238.397676609136.pt')
         #self.warthog_ppo.read_ppo_policy('/home/administrator/warthog_rl_alien/policy/vel_weight9_stable9')
         #self.warthog_ppo.read_ppo_policy('./model2')
         #self.warthog_ppo.read_waypoint_file(waypoint_file_path)
@@ -84,7 +85,7 @@ class HuskyPPONode:
             #return
         v = data.twist.twist.linear.x
         rospy.logwarn("getting twist")
-        w = -data.twist.twist.angular.z
+        w = data.twist.twist.angular.z
         self.warthog_ppo.set_twist([v, w])
         if not self.got_twist:
             self.got_twist = True
@@ -120,8 +121,8 @@ class HuskyPPONode:
         #return
         #if self.got_odom:
             #return
-        x = data.pose.pose.position.y 
-        y = data.pose.pose.position.x
+        x = data.pose.pose.position.x 
+        y = data.pose.pose.position.y
         temp_y = data.pose.pose.orientation.z
         temp_x = data.pose.pose.orientation.w
         print("z: ", temp_y)
@@ -130,7 +131,7 @@ class HuskyPPONode:
         myqut = qut(quat)
         print("without sign: ",myqut.radians*180/math.pi)
         # negative for airsim since its odometry is in NED frame
-        th = zero_to_2pi((math.pi/2)-myqut.radians*np.sign(temp_y))
+        th = zero_to_2pi(myqut.radians*np.sign(temp_y))
         print("with sign: ",th*180/math.pi)
         #th = 2*math.atan2(temp_y, temp_x)*180/math.pi
         #th = data.pose.covariance[1]
